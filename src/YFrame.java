@@ -36,6 +36,8 @@ public class YFrame extends JFrame {
 	private JPanel contentPane;
 	private String[] compare = {"=", ">", "<"};
 	private String[] compare2 = {"AND", "OR"};
+	private String[] days = {"Sunday","Monday","Tuesday","Wednesday","Thursday","Friday","Saturday"};
+	private String[] hours = new String[24];
 	private JPanel userPn;
 	private JTable table;
 	private JTextArea queryArea; //query result
@@ -54,6 +56,18 @@ public class YFrame extends JFrame {
 	private List<JCheckBox> sboxes = new ArrayList<>();
 	private JPanel subPl;
 	private JScrollPane subScroll;
+	private JTextField checkTxt;
+	private JComboBox dayBox;
+	private JComboBox hourBox;
+	private JComboBox dayBox2;
+	private JComboBox hourBox2;
+	private JComboBox checkBox;
+	private JTextField fromTxt;
+	private JTextField toTxt;
+	private JTextField starvTxt;
+	private JTextField votevTxt;
+	private JComboBox starRevBox;
+	private JComboBox voteRevBox;
 	
 	/**
 	 * Create the frame.
@@ -74,6 +88,13 @@ public class YFrame extends JFrame {
 		resultPanel(); //result
 		
 		addListener();
+		
+		for(int i=0; i<hours.length; i++) {
+			if(i<10)
+				hours[i] = "0" + i + ":00";
+			else
+				hours[i] = i + ":00";
+		}
 
 		JLabel mainLb = new JLabel("Category");
 		mainLb.setFont(new Font("Serif", Font.PLAIN, 18));
@@ -94,6 +115,12 @@ public class YFrame extends JFrame {
 				@Override
 				public void itemStateChanged(ItemEvent e) {
 					System.out.println("clicked");
+					votevTxt.setText("");
+					starvTxt.setText("");
+					toTxt.setText("");
+					fromTxt.setText("");
+					checkTxt.setText("");
+					queryArea.setText("");
 					subPl.removeAll();
 					sboxes.clear();
 					
@@ -138,7 +165,53 @@ public class YFrame extends JFrame {
 		checkPn.setBackground(Color.WHITE);
 		checkPn.setBounds(460, 29, 168, 376);
 		contentPane.add(checkPn);
+		checkPn.setLayout(new GridLayout(0, 1, 1, 1));
+		
+		JLabel lblNewLabel = new JLabel("From");
+		checkPn.add(lblNewLabel);
+		
+		dayBox = new JComboBox(days);
+		checkPn.add(dayBox);
+		
+		hourBox = new JComboBox(hours);
+		checkPn.add(hourBox);
 
+		JLabel lblNewLabel1 = new JLabel("To");
+		checkPn.add(lblNewLabel1);
+		
+		dayBox2 = new JComboBox(days);
+		checkPn.add(dayBox2);
+		
+		hourBox2 = new JComboBox(hours);
+		checkPn.add(hourBox2);
+		
+		JLabel lblNewLabel2 = new JLabel("Num. of Checkins");
+		checkPn.add(lblNewLabel2);
+		
+		checkBox = new JComboBox(compare);
+		checkPn.add(checkBox);
+		
+		JLabel lblNewLabel3 = new JLabel("Value");
+		checkPn.add(lblNewLabel3);
+		
+		checkTxt = new JTextField();
+		checkPn.add(checkTxt);
+		
+		checkTxt.getDocument().addDocumentListener(new DocumentListener() {
+			@Override
+			public void insertUpdate(DocumentEvent e) {
+				createCheckQuery();
+			}
+			@Override
+			public void removeUpdate(DocumentEvent e) {
+				createCheckQuery();
+			}
+			@Override
+			public void changedUpdate(DocumentEvent e) {
+				createCheckQuery();
+			}
+		});
+		
 		//review
 		JLabel revLb = new JLabel("Review");
 		revLb.setFont(new Font("Serif", Font.PLAIN, 18));
@@ -149,7 +222,181 @@ public class YFrame extends JFrame {
 		revPn.setBackground(Color.WHITE);
 		revPn.setBounds(638, 29, 162, 376);
 		contentPane.add(revPn);
+		revPn.setLayout(new GridLayout(0, 2, 1, 1));
 		
+		JLabel lblNewLabel_1 = new JLabel("<html>From<br>(YYYY-MM-DD)</html>");
+		revPn.add(lblNewLabel_1);
+		
+		fromTxt = new JTextField();
+		fromTxt.setToolTipText("YYYY-MM-DD");
+		revPn.add(fromTxt);
+		fromTxt.setColumns(10);
+		
+		JLabel lblNewLabel_2 = new JLabel("<html>To<br>(YYYY-MM-DD)</html>");
+		revPn.add(lblNewLabel_2);
+		
+		toTxt = new JTextField();
+		revPn.add(toTxt);
+		toTxt.setColumns(10);
+		
+		JLabel lblNewLabel_3 = new JLabel("Star");
+		revPn.add(lblNewLabel_3);
+		
+		starRevBox = new JComboBox(compare);
+		revPn.add(starRevBox);
+		
+		JLabel lblNewLabel_4 = new JLabel("Value");
+		revPn.add(lblNewLabel_4);
+		
+		starvTxt = new JTextField();
+		revPn.add(starvTxt);
+		starvTxt.setColumns(10);
+		starvTxt.getDocument().addDocumentListener(new DocumentListener() {
+			@Override
+			public void insertUpdate(DocumentEvent e) {
+				 createRevQuery();
+			}
+			@Override
+			public void removeUpdate(DocumentEvent e) {
+				createRevQuery();
+				
+			}
+			@Override
+			public void changedUpdate(DocumentEvent e) {
+				createRevQuery();
+			}
+		});
+		
+		JLabel lblNewLabel_5 = new JLabel("Votes");
+		revPn.add(lblNewLabel_5);
+		
+		voteRevBox = new JComboBox(compare);
+		revPn.add(voteRevBox);
+		
+		JLabel lblNewLabel_6 = new JLabel("Value");
+		revPn.add(lblNewLabel_6);
+		
+		votevTxt = new JTextField();
+		revPn.add(votevTxt);
+		votevTxt.setColumns(10);
+		votevTxt.getDocument().addDocumentListener(new DocumentListener() {
+			@Override
+			public void insertUpdate(DocumentEvent e) {
+				 createRevQuery();
+			}
+			@Override
+			public void removeUpdate(DocumentEvent e) {
+				createRevQuery();
+				
+			}
+			@Override
+			public void changedUpdate(DocumentEvent e) {
+				createRevQuery();
+			}
+		});
+	}
+	
+	private void createRevQuery() {
+		boolean isCat = false;
+		StringBuilder defa = new StringBuilder("SELECT * FROM BUSINESS WHERE BUSINESS_ID IN (\n");
+		StringBuilder cur = new StringBuilder("SELECT R.BUSINESS_ID FROM REVIEWS R \nWHERE ");
+		StringBuilder sb = new StringBuilder(" AND B.BUSINESS_ID IN (\n");
+
+		
+		if(!fromTxt.getText().isEmpty()) {
+			cur.append("REVIEW_DATE >= TO_DATE('").append(fromTxt.getText()).append("','yyyy-mm-dd') ");
+		}
+		
+		if(!toTxt.getText().isEmpty()) {
+			if(!cur.toString().endsWith("WHERE ")) {
+				cur.append("AND ");
+			}
+			
+			cur.append("REVIEW_DATE <= TO_DATE('").append(toTxt.getText()).append("','yyyy-mm-dd') ");
+		}
+		
+		if(!starvTxt.getText().isEmpty()) {
+			if(!cur.toString().endsWith("WHERE ")) {
+				cur.append("AND ");
+			}
+			
+			cur.append("STARS").append(starRevBox.getSelectedItem()).append(starvTxt.getText()).append(" ");
+		}
+		
+		if(!votevTxt.getText().isEmpty()) {
+			if(!cur.toString().endsWith("WHERE ")) {
+				cur.append("AND ");
+			}
+			
+			cur.append("(USEFUL+FUNNY+COOL)").append(voteRevBox.getSelectedItem()).append(votevTxt.getText());
+		}
+		
+		cur.append(") ");
+		
+		//check cate selected
+		for(JCheckBox b: boxes) {
+			if(b.isSelected()) {
+				isCat = true;
+				break;
+			}
+		}
+		
+		if(!isCat) {
+			for(JCheckBox b: sboxes) {
+				if(b.isSelected()) {
+					isCat = true;
+					break;
+				}
+			}
+		}
+		
+		if(isCat) {
+			createSubQuery();
+			createCheckQuery();
+			queryArea.setText(queryArea.getText() + sb.toString() + cur.toString());
+		} else {
+			queryArea.setText(defa.toString() + cur.toString());
+		}
+	}
+	
+	private void createCheckQuery() {
+		StringBuilder defa = new StringBuilder("SELECT * FROM BUSINESS WHERE BUSINESS_ID IN (\n");
+		StringBuilder sb = new StringBuilder(" AND B.BUSINESS_ID IN (\n");//WHERE BUSINESS_ID IN (\
+		StringBuilder res = new StringBuilder("SELECT BUSINESS_ID FROM CHECKIN \nWHERE ");
+		boolean isCat = false;
+		
+		if(checkTxt.getText().isEmpty()) {
+			createSubQuery();
+			return;
+		}
+		
+		for(JCheckBox b: boxes) {
+			if(b.isSelected()) {
+				isCat = true;
+				break;
+			}
+		}
+		
+		if(!isCat) {
+			for(JCheckBox b: sboxes) {
+				if(b.isSelected()) {
+					isCat = true;
+					break;
+				}
+			}
+		}
+		
+		res.append("DAY>=").append(dayBox.getSelectedIndex()).append(" AND ").append("DAY<=").append(dayBox2.getSelectedIndex());
+		res.append(" AND ").append("HOUR>=").append(hourBox.getSelectedIndex());
+		res.append(" AND ").append("HOUR<").append(hourBox2.getSelectedIndex()).append(" \n");
+		res.append("GROUP BY BUSINESS_ID HAVING SUM(COUNT)").append(checkBox.getSelectedItem()).append(checkTxt.getText()).append(")");
+		
+		if(isCat) {
+			createSubQuery();
+			queryArea.setText(queryArea.getText() + sb.toString() + res.toString());
+			
+		} else
+			queryArea.setText(defa + res.toString());
 	}
 	
 	//SELECT * FROM BUSINESS B, MAIN_CATE M, SUB_CATE S WHERE M.CAT_ID=B.CATEGORIES AND (M.CAT_ID=1) 
@@ -245,6 +492,11 @@ public class YFrame extends JFrame {
 
 					@Override
 					public void itemStateChanged(ItemEvent e) {
+						votevTxt.setText("");
+						starvTxt.setText("");
+						toTxt.setText("");
+						fromTxt.setText("");
+						checkTxt.setText("");
 						createSubQuery();
 					}
 				});

@@ -21,6 +21,8 @@ import javax.swing.JComboBox;
 
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
+import java.awt.event.ItemEvent;
+import java.awt.event.ItemListener;
 import java.awt.event.MouseAdapter;
 import java.awt.event.MouseEvent;
 import java.sql.ResultSet;
@@ -48,6 +50,10 @@ public class YFrame extends JFrame {
 	private String preRevBox = "=";
 	private String preFriendBox = "=";
 	private String preStarBox = "=";
+	private List<JCheckBox> boxes;
+	private List<JCheckBox> sboxes = new ArrayList<>();
+	private JPanel subPl;
+	private JScrollPane subScroll;
 	
 	/**
 	 * Create the frame.
@@ -74,11 +80,216 @@ public class YFrame extends JFrame {
 		mainLb.setBounds(66, 4, 65, 27);
 		contentPane.add(mainLb);
 		
-		JScrollPane maincatScroll = new JScrollPane();
+		
+		// main category checkbox list
+		JPanel mainPl = new JPanel(new GridLayout(0, 1));
+		JScrollPane maincatScroll = new JScrollPane(JScrollPane.VERTICAL_SCROLLBAR_AS_NEEDED, JScrollPane.HORIZONTAL_SCROLLBAR_AS_NEEDED);
+		
 		maincatScroll.setBounds(10, 37, 210, 346);
 		contentPane.add(maincatScroll);
 		
+		boxes = queryMainCategory();
+		for(JCheckBox box: boxes) { //add listener when click main cate
+			box.addItemListener(new ItemListener() {
+				@Override
+				public void itemStateChanged(ItemEvent e) {
+					System.out.println("clicked");
+					subPl.removeAll();
+					sboxes.clear();
+					
+					for(JCheckBox bo: boxes) {
+						if(bo.isSelected()) {
+							createSubCategory();
+							createMainQuery();
+							break;
+						}
+					}
+					
+					subPl.revalidate();
+					subPl.repaint();
+					subScroll.setViewportView(subPl);
+				}
+			});
+			mainPl.add(box);
+		}
 		
+		maincatScroll.setViewportView(mainPl);
+		
+		//sub category
+		JLabel subLb = new JLabel("Sub-Category");
+		subLb.setFont(new Font("Serif", Font.PLAIN, 18));
+		subLb.setBounds(274, 4, 120, 27);
+		contentPane.add(subLb);
+		
+		subScroll = new JScrollPane(JScrollPane.VERTICAL_SCROLLBAR_AS_NEEDED, JScrollPane.HORIZONTAL_SCROLLBAR_AS_NEEDED);
+		subScroll.setBounds(234, 37, 215, 345);
+		contentPane.add(subScroll);
+		
+		subPl = new JPanel(new GridLayout(0, 1));
+		subScroll.setViewportView(subPl);
+
+		//checkin
+		JLabel checkinLb = new JLabel("Checkin");
+		checkinLb.setFont(new Font("Serif", Font.PLAIN, 18));
+		checkinLb.setBounds(508, 7, 120, 21);
+		contentPane.add(checkinLb);
+		
+		JPanel checkPn = new JPanel();
+		checkPn.setBackground(Color.WHITE);
+		checkPn.setBounds(460, 29, 168, 376);
+		contentPane.add(checkPn);
+
+		//review
+		JLabel revLb = new JLabel("Review");
+		revLb.setFont(new Font("Serif", Font.PLAIN, 18));
+		revLb.setBounds(678, 4, 120, 21);
+		contentPane.add(revLb);
+		
+		JPanel revPn = new JPanel();
+		revPn.setBackground(Color.WHITE);
+		revPn.setBounds(638, 29, 162, 376);
+		contentPane.add(revPn);
+		
+	}
+	
+	//SELECT * FROM BUSINESS B, MAIN_CATE M, SUB_CATE S WHERE M.CAT_ID=B.CATEGORIES AND (M.CAT_ID=1) 
+	//AND B.BUSINESS_ID=S.BUSINESS_ID AND (S.NAME = 'Swimming Lessons/Schools')
+	private void createMainQuery() {
+		StringBuilder sb = new StringBuilder("SELECT B.*, M.NAME AS MAIN_CATEGORY FROM BUSINESS B, MAIN_CATE M \nWHERE M.CAT_ID=B.CATEGORIES AND (M.CAT_ID=");
+		boolean first = true;
+		
+		for(JCheckBox bo: boxes) {
+			if(bo.isSelected()) {
+				if(first) {
+					sb.append(bo.getActionCommand());
+					first = false;
+				} else
+					sb.append(" OR M.CAT_ID=").append(bo.getActionCommand());
+			}
+		}
+		sb.append(")");
+		queryArea.setText(sb.toString());
+	}
+	
+	private void createSubQuery() {
+		StringBuilder ands = new StringBuilder("SELECT B.*, M.NAME AS MAIN_CATEGORY, S.NAME AS SUB_CATEGORY"
+				+ " FROM BUSINESS B, MAIN_CATE M, SUB_CATE S \nWHERE M.CAT_ID=B.CATEGORIES AND (M.CAT_ID=");
+		boolean isSubSelected = false;
+		boolean isFirst = true;
+		boolean first = true;
+		
+		for(JCheckBox bo: boxes) {
+			if(bo.isSelected()) {
+				if(first) {
+					ands.append(bo.getActionCommand());
+					first = false;
+				} else
+					ands.append(" OR M.CAT_ID=").append(bo.getActionCommand());
+			}
+		}
+		ands.append(") ");
+		
+		ands.append("AND B.BUSINESS_ID=S.BUSINESS_ID AND (S.NAME='");
+		
+		for(JCheckBox bo: sboxes) {
+			if(bo.isSelected()) {
+				isSubSelected = true;
+				
+				if(isFirst) {
+					isFirst = false;
+					ands.append(bo.getText()).append("' ");
+				} else {
+					ands.append("OR S.NAME='").append(bo.getText()).append("' ");
+				}
+			}
+		}
+		
+		ands.append(")");
+		
+		if(!isSubSelected) {
+			createMainQuery();
+		} else {
+			queryArea.setText(ands.toString());
+		}
+	}
+	
+	private void createSubCategory() {
+		DBconn db = new DBconn();
+		//ArrayList<String> ids = new ArrayList<>();
+		StringBuilder ands = new StringBuilder();
+		boolean isFirst = true;
+		int count = 0;
+		
+		for(JCheckBox bo: boxes) {
+			if(bo.isSelected()) {
+				if(isFirst) {
+					ands.append("B.CATEGORIES=").append(bo.getActionCommand()).append(" ");
+					isFirst = false;
+				} else {
+					ands.append("OR ").append("B.CATEGORIES=").append(bo.getActionCommand()).append(" ");
+				}
+			}
+		}
+		System.out.println("SELECT DISTINCT C.NAME FROM SUB_CATE C, BUSINESS B WHERE (" + ands.toString() +
+				") AND C.BUSINESS_ID=B.BUSINESS_ID");
+		
+		ResultSet res = db.executeQuery("SELECT DISTINCT C.NAME FROM SUB_CATE C, BUSINESS B WHERE (" + ands.toString() +
+								") AND C.BUSINESS_ID=B.BUSINESS_ID");
+		
+		try {
+			while(res.next()) {
+				JCheckBox b = new JCheckBox(res.getString(1));
+				
+				//sub cate listener (make query)
+				b.addItemListener(new ItemListener() {
+
+					@Override
+					public void itemStateChanged(ItemEvent e) {
+						createSubQuery();
+					}
+				});
+				
+				sboxes.add(b);
+				count++;
+			}
+		} catch (SQLException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		}
+		
+		System.out.println(count);
+		
+		//add panel
+		for(JCheckBox bb: sboxes)
+			subPl.add(bb);
+		
+		db.closeDB();
+	}
+	
+	private List<JCheckBox> queryMainCategory() {
+		//JCheckBox b = new JCheckBox("test");
+		List<JCheckBox> boxes = new ArrayList<>();
+		//boxes.add(b);
+		
+		DBconn db = new DBconn();
+		
+		ResultSet res = db.executeQuery("SELECT * FROM MAIN_CATE");
+		
+		try {
+			while(res.next()) {
+				JCheckBox b = new JCheckBox(res.getString(2));				
+				b.setActionCommand(Integer.toString(res.getInt(1)));
+				boxes.add(b);
+			}
+		} catch (SQLException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		}
+		
+		
+		db.closeDB();
+		
+		return boxes;
 	}
 
 	private void exeQuery(String sql) {
@@ -209,7 +420,7 @@ public class YFrame extends JFrame {
 		contentPane.add(resultLb);
 		
 		JLabel queryLb = new JLabel("Query");
-		queryLb.setBounds(588, 396, 46, 21);
+		queryLb.setBounds(604, 407, 46, 21);
 		queryLb.setFont(new Font("Serif", Font.PLAIN, 18));
 		contentPane.add(queryLb);
 		
@@ -239,7 +450,7 @@ public class YFrame extends JFrame {
 		contentPane.add(userPn);
 		
 		JLabel userLb = new JLabel("Users");
-		userLb.setBounds(195, 393, 41, 27);
+		userLb.setBounds(198, 404, 41, 27);
 		userLb.setFont(new Font("Serif", Font.PLAIN, 18));
 		contentPane.add(userLb);
 		

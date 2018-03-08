@@ -68,6 +68,7 @@ public class YFrame extends JFrame {
 	private JTextField votevTxt;
 	private JComboBox starRevBox;
 	private JComboBox voteRevBox;
+	private boolean isUser = true;
 	
 	/**
 	 * Create the frame.
@@ -554,6 +555,12 @@ public class YFrame extends JFrame {
 		ArrayList<String> col = new ArrayList<String>();
 		List<List<Object>> data = new ArrayList<>();
 		
+		//user or business search
+		if(queryArea.getText().contains("USERS")) {
+			isUser = true;
+		} else 
+			isUser = false;
+		
 		try {
 			meta = res.getMetaData();
 			colCount = meta.getColumnCount();
@@ -642,6 +649,52 @@ public class YFrame extends JFrame {
 		
 		db.closeDB();
 	}
+	
+	private void queryReviewByBusId(String busid) {
+		DBconn db = new DBconn();
+		
+		ResultSet res = db.executeQuery("SELECT U.NAME AS USER_NAME, R.* FROM REVIEWS R, USERS U WHERE R.USER_ID=U.USER_ID AND R.BUSINESS_ID='" + busid + "'");
+		ResultSetMetaData meta;
+		int colCount = 0;
+		ArrayList<String> col = new ArrayList<String>();
+		List<List<Object>> data = new ArrayList<>();
+		
+		try {
+			meta = res.getMetaData();
+			colCount = meta.getColumnCount();
+			
+			for(int i=1; i<=colCount; i++) {
+				col.add(meta.getColumnName(i));
+			}
+			
+			while(res.next()) {
+				ArrayList<Object> rows = new ArrayList<>();
+				
+				for(String name: col) {
+					String temp = res.getString(name);
+					
+					rows.add(temp);
+				}
+				
+				data.add(rows);
+			}
+		} catch (SQLException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		}
+		
+		DefaultTableModel mod = new DefaultTableModel();
+		
+		for(String c: col)
+			mod.addColumn(c);
+		
+		for(List<Object> ea: data)
+			mod.addRow(ea.toArray());
+		
+		table.setModel(mod);
+		
+		db.closeDB();
+	}
 	  
 	private void resultPanel() {
 		table = new JTable();
@@ -651,10 +704,18 @@ public class YFrame extends JFrame {
 
 			@Override
 			public void valueChanged(ListSelectionEvent e) {
-				if(table.getSelectedRow() != -1 && !e.getValueIsAdjusting()) {
-					System.out.println(table.getValueAt(table.getSelectedRow(), 0)); //print user_id
+				if(isUser) {
+					if(table.getSelectedRow() != -1 && !e.getValueIsAdjusting()) {
+						System.out.println(table.getValueAt(table.getSelectedRow(), 0)); //print user_id
 					
-					queryReviewByUserId(table.getValueAt(table.getSelectedRow(), 0).toString());
+						queryReviewByUserId(table.getValueAt(table.getSelectedRow(), 0).toString());
+					}
+				} else {
+					if(table.getSelectedRow() != -1 && !e.getValueIsAdjusting()) {
+						System.out.println(table.getValueAt(table.getSelectedRow(), 0)); //print business_id
+						
+						queryReviewByBusId(table.getValueAt(table.getSelectedRow(), 0).toString());
+					}
 				}
 			}
 		});

@@ -53,7 +53,7 @@ public class UserTxtListener implements DocumentListener {
 		StringBuilder sb = new StringBuilder(begin);
 		
 		if(!member.getText().isEmpty()) {
-			sb.append("YELPING_SINCE = TO_DATE('").append(member.getText()).append("-01', 'yyyy-mm-dd') ");
+			sb.append("YELPING_SINCE >= TO_DATE('").append(member.getText()).append("-01', 'yyyy-mm-dd') ");
 		}
 		
 		if(!review.getText().isEmpty()) {
